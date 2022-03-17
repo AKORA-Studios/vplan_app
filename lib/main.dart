@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "Flutter Demo",
+      title: "VPlan",
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -81,27 +81,41 @@ Future<VPlan> _downloadVPlan(VPlanType typ) async {
 
 class _MyHomePageState extends State<MyHomePage> {
   VPlan? vplanData;
+  bool loading = true;
 
   Future<void> _loadVPlan() async {
+    setState(() {
+      loading = true;
+    });
+
     VPlan tmp = await _downloadVPlanURL(
         'http://192.168.1.28:3001/akora/lernsax/raw/commit/2be908d5914d6ae327ddd41184ce999076f5c236/vplan.json');
 
     setState(() {
       vplanData = tmp;
+      loading = false;
     });
   }
 
   Future<void> _loadNextVPlan() async {
+    setState(() {
+      loading = true;
+    });
     VPlan tmp = await _downloadVPlan(VPlanType.next);
     setState(() {
       vplanData = tmp;
+      loading = false;
     });
   }
 
   Future<void> _loadCurrentVPlan() async {
+    setState(() {
+      loading = true;
+    });
     VPlan tmp = await _downloadVPlan(VPlanType.current);
     setState(() {
       vplanData = tmp;
+      loading = false;
     });
   }
 
@@ -147,17 +161,15 @@ class _MyHomePageState extends State<MyHomePage> {
             shape: const StadiumBorder()),
       ));
 
-  @override
-  Widget build(BuildContext context) {
-    if (vplanData == null) {
+  Widget _vPlanTable(VPlan? plan) {
+    if (plan == null) {
       _loadNextVPlan();
 
-      return Scaffold(
-          appBar: AppBar(
-            title: Text(widget.title),
-          ),
-          body: const Center(child: Text("A")));
+      return const SizedBox.shrink();
     }
+
+    String title = vplanData!.head.title;
+    String subtitle = vplanData!.head.created;
 
     List<DataRow> rows = [];
     for (var entry in vplanData!.body) {
@@ -171,34 +183,53 @@ class _MyHomePageState extends State<MyHomePage> {
       ]));
     }
 
-    String title = vplanData!.head.title;
-    String subtitle = vplanData!.head.created;
+    return Column(
+      children: [
+        Text(title),
+        Text("Letzte Änderung am: $subtitle"),
+        DataTable(
+          columnSpacing: 10,
+          columns: const <DataColumn>[
+            DataColumn(label: Text("Klasse")),
+            DataColumn(label: Text("S")),
+            DataColumn(label: Text("Fach")),
+            DataColumn(label: Text("Lehrer")),
+            DataColumn(label: Text("Raum")),
+            DataColumn(label: Text("Info"))
+          ],
+          rows: rows,
+        ),
+        // This trailing comma makes auto-formatting nicer for build methods.
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Einstellungen',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('This is a snackbar')));
+            },
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(10),
+          child: loading
+              ? const LinearProgressIndicator()
+              : const SizedBox.shrink(),
+        ),
       ),
       body: SingleChildScrollView(
           child: Padding(
               padding: const EdgeInsets.all(10),
-              child: Column(
-                children: [
-                  Text(title),
-                  Text("Letzte Änderung am: $subtitle"),
-                  DataTable(
-                    columnSpacing: 10,
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text("Klasse")),
-                      DataColumn(label: Text("S")),
-                      DataColumn(label: Text("Fach")),
-                      DataColumn(label: Text("Lehrer")),
-                      DataColumn(label: Text("Raum")),
-                      DataColumn(label: Text("Info"))
-                    ],
-                    rows: rows,
-                  ),
-                  // This trailing comma makes auto-formatting nicer for build methods.
-                ],
-              ))),
+              child: _vPlanTable(vplanData))),
       floatingActionButton: Align(
           alignment: Alignment.bottomRight,
           child: SizedBox(height: 80.0, width: 80.0, child: _offsetPopup())),
