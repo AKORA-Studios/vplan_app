@@ -142,8 +142,9 @@ class _MyHomePageState extends State<MyHomePage> {
           Icons.refresh,
           color: Colors.white,
         ),
-        decoration:
-            const ShapeDecoration(color: Colors.blue, shape: StadiumBorder()),
+        decoration: ShapeDecoration(
+            color: Theme.of(context).primaryColor,
+            shape: const StadiumBorder()),
       ));
 
   @override
@@ -170,27 +171,34 @@ class _MyHomePageState extends State<MyHomePage> {
       ]));
     }
 
+    String title = vplanData!.head.title;
+    String subtitle = vplanData!.head.created;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
       body: SingleChildScrollView(
-        child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: DataTable(
-              columnSpacing: 10,
-              columns: const <DataColumn>[
-                DataColumn(label: Text("Klasse")),
-                DataColumn(label: Text("S")),
-                DataColumn(label: Text("Fach")),
-                DataColumn(label: Text("Lehrer")),
-                DataColumn(label: Text("Raum")),
-                DataColumn(label: Text("Info"))
-              ],
-              rows: rows,
-            )),
-        // This trailing comma makes auto-formatting nicer for build methods.
-      ),
+          child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  Text(title),
+                  Text("Letzte Änderung am: $subtitle"),
+                  DataTable(
+                    columnSpacing: 10,
+                    columns: const <DataColumn>[
+                      DataColumn(label: Text("Klasse")),
+                      DataColumn(label: Text("S")),
+                      DataColumn(label: Text("Fach")),
+                      DataColumn(label: Text("Lehrer")),
+                      DataColumn(label: Text("Raum")),
+                      DataColumn(label: Text("Info"))
+                    ],
+                    rows: rows,
+                  ),
+                  // This trailing comma makes auto-formatting nicer for build methods.
+                ],
+              ))),
       floatingActionButton: Align(
           alignment: Alignment.bottomRight,
           child: SizedBox(height: 80.0, width: 80.0, child: _offsetPopup())),
