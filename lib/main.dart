@@ -1,4 +1,10 @@
+// ignore_for_file: avoid_print
+
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:vplan_app/json/vplan.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: "Flutter Demo",
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -48,42 +54,111 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  VPlan? vplanData;
 
-  void _incrementCounter() {
+  Future<void> _loadVPlan() async {
+    String str = await http.read(Uri.parse(
+        'http://192.168.1.28:3001/akora/lernsax/raw/commit/2be908d5914d6ae327ddd41184ce999076f5c236/vplan.json'));
+    print(str.length.toString() + " Lines");
+    VPlan tmp = vPlanFromJson(str);
     setState(() {
-      _counter++;
+      vplanData = tmp;
+      print(tmp.body[0].lesson);
     });
   }
 
+  Future<void> _loadLiveVPlan() async {
+    String str = await http.read(
+        Uri.parse('https://manos-dresden.de/vplan/upload/next/students.json'),
+        headers: {
+          HttpHeaders.authorizationHeader: 'Basic bWFub3M6TWFuMThWcGxhbg=='
+        });
+    print(str.length.toString() + " Lines");
+    VPlan tmp = vPlanFromJson(str);
+    setState(() {
+      vplanData = tmp;
+      print(tmp.body[0].lesson);
+    });
+  }
+
+  Widget _offsetPopup() => PopupMenuButton<int>(
+      itemBuilder: (context) => const [
+            PopupMenuItem(
+              value: 1,
+              child: Text(
+                "Flutter Open",
+                style:
+                    TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+              ),
+            ),
+            PopupMenuItem(
+              value: 2,
+              child: Text(
+                "Flutter Tutorial",
+                style:
+                    TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+      icon: Container(
+        height: double.infinity,
+        width: double.infinity,
+        child: const Icon(
+          Icons.refresh,
+          color: Colors.white,
+        ),
+        decoration:
+            const ShapeDecoration(color: Colors.blue, shape: StadiumBorder()),
+      ));
+
   @override
   Widget build(BuildContext context) {
+    if (vplanData == null) {
+      _loadLiveVPlan();
+
+      return Scaffold(
+          appBar: AppBar(
+            title: Text(widget.title),
+          ),
+          body: const Center(child: Text("A")));
+    }
+
+    List<DataRow> rows = [];
+    for (var entry in vplanData!.body) {
+      rows.add(DataRow(cells: <DataCell>[
+        DataCell(Text(entry.bodyClass)),
+        DataCell(Text(entry.lesson)),
+        DataCell(Text(entry.subject)),
+        DataCell(Text(entry.teacher)),
+        DataCell(Text(entry.room)),
+        DataCell(SingleChildScrollView(child: Text(entry.info)))
+      ]));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: MediaQuery.removePadding(
-        context: context,
-        removeTop: true,
-        child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 6,
-            ),
+      body: SingleChildScrollView(
+        child: Padding(
             padding: const EdgeInsets.all(10),
-            itemCount: 300,
-            itemBuilder: (BuildContext context, int index) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 2, top: 2),
-                color: Colors.amber,
-                child: Center(child: Text('$index')),
-              );
-            }),
+            child: DataTable(
+              columnSpacing: 10,
+              columns: const <DataColumn>[
+                DataColumn(label: Text("Klasse")),
+                DataColumn(label: Text("S")),
+                DataColumn(label: Text("Fach")),
+                DataColumn(label: Text("Lehrer")),
+                DataColumn(label: Text("Raum")),
+                DataColumn(label: Text("Info"))
+              ],
+              rows: rows,
+            )),
+        // This trailing comma makes auto-formatting nicer for build methods.
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      floatingActionButton: Align(
+          alignment: Alignment.bottomRight,
+          child: SizedBox(height: 80.0, width: 80.0, child: _offsetPopup())),
     );
   }
 }
