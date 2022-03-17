@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -53,51 +54,85 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+Future<String> _download(String url) async {
+  final response = await http.get(Uri.parse(url), headers: {
+    HttpHeaders.authorizationHeader: 'Basic bWFub3M6TWFuMThWcGxhbg=='
+  });
+
+  return utf8.decode(response.bodyBytes);
+}
+
+Future<VPlan> _downloadVPlanURL(String typ) async {
+  return vPlanFromJson(await _download(typ));
+}
+
+enum VPlanType { next, current }
+
+Future<VPlan> _downloadVPlan(VPlanType typ) async {
+  switch (typ) {
+    case VPlanType.current:
+      return await _downloadVPlanURL(
+          'https://manos-dresden.de/vplan/upload/current/students.json');
+    case VPlanType.next:
+      return await _downloadVPlanURL(
+          'https://manos-dresden.de/vplan/upload/next/students.json');
+  }
+}
+
 class _MyHomePageState extends State<MyHomePage> {
   VPlan? vplanData;
 
   Future<void> _loadVPlan() async {
-    String str = await http.read(Uri.parse(
-        'http://192.168.1.28:3001/akora/lernsax/raw/commit/2be908d5914d6ae327ddd41184ce999076f5c236/vplan.json'));
-    print(str.length.toString() + " Lines");
-    VPlan tmp = vPlanFromJson(str);
+    VPlan tmp = await _downloadVPlanURL(
+        'http://192.168.1.28:3001/akora/lernsax/raw/commit/2be908d5914d6ae327ddd41184ce999076f5c236/vplan.json');
+
     setState(() {
       vplanData = tmp;
-      print(tmp.body[0].lesson);
     });
   }
 
-  Future<void> _loadLiveVPlan() async {
-    String str = await http.read(
-        Uri.parse('https://manos-dresden.de/vplan/upload/next/students.json'),
-        headers: {
-          HttpHeaders.authorizationHeader: 'Basic bWFub3M6TWFuMThWcGxhbg=='
-        });
-    print(str.length.toString() + " Lines");
-    VPlan tmp = vPlanFromJson(str);
+  Future<void> _loadNextVPlan() async {
+    VPlan tmp = await _downloadVPlan(VPlanType.next);
     setState(() {
       vplanData = tmp;
-      print(tmp.body[0].lesson);
+    });
+  }
+
+  Future<void> _loadCurrentVPlan() async {
+    VPlan tmp = await _downloadVPlan(VPlanType.current);
+    setState(() {
+      vplanData = tmp;
     });
   }
 
   Widget _offsetPopup() => PopupMenuButton<int>(
-      itemBuilder: (context) => const [
+      itemBuilder: (context) => [
             PopupMenuItem(
               value: 1,
-              child: Text(
-                "Flutter Open",
+              child: const Text(
+                "Current",
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
+              onTap: _loadCurrentVPlan,
             ),
             PopupMenuItem(
               value: 2,
-              child: Text(
-                "Flutter Tutorial",
+              child: const Text(
+                "Next",
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
+              onTap: _loadNextVPlan,
+            ),
+            PopupMenuItem(
+              value: 3,
+              child: const Text(
+                "Custom",
+                style:
+                    TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+              ),
+              onTap: _loadVPlan,
             ),
           ],
       icon: Container(
@@ -114,7 +149,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     if (vplanData == null) {
-      _loadLiveVPlan();
+      _loadNextVPlan();
 
       return Scaffold(
           appBar: AppBar(
