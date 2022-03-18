@@ -80,12 +80,11 @@ Future<VPlan> _downloadVPlan(VPlanType typ) async {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  VPlan? vplanData;
-  String vplanVariant = "";
   String commit = "2be908d5914d6ae327ddd41184ce999076f5c236";
   bool loading = true;
+  List<Widget> tabViews = const [SizedBox(), SizedBox(), SizedBox()];
 
-  Future<void> _loadVPlan() async {
+  Future<VPlan> _loadVPlan() async {
     setState(() {
       loading = true;
     });
@@ -94,34 +93,34 @@ class _MyHomePageState extends State<MyHomePage> {
         'http://192.168.1.28:3001/akora/lernsax/raw/commit/$commit/vplan.json');
 
     setState(() {
-      vplanData = tmp;
-      vplanVariant = "Commit " + commit.substring(0, 8);
       loading = false;
     });
+
+    return tmp;
   }
 
-  Future<void> _loadNextVPlan() async {
+  Future<VPlan> _getNextVPlan() async {
     setState(() {
       loading = true;
     });
     VPlan tmp = await _downloadVPlan(VPlanType.next);
     setState(() {
-      vplanData = tmp;
-      vplanVariant = "Next";
       loading = false;
     });
+
+    return tmp;
   }
 
-  Future<void> _loadCurrentVPlan() async {
+  Future<VPlan> _getCurrentVPlan() async {
     setState(() {
       loading = true;
     });
     VPlan tmp = await _downloadVPlan(VPlanType.current);
     setState(() {
-      vplanData = tmp;
-      vplanVariant = "Current";
       loading = false;
     });
+
+    return tmp;
   }
 
   Widget _offsetPopup() => PopupMenuButton<int>(
@@ -133,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
-              onTap: _loadCurrentVPlan,
+              onTap: _getCurrentVPlan,
             ),
             PopupMenuItem(
               value: 2,
@@ -142,7 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
-              onTap: _loadNextVPlan,
+              onTap: _getNextVPlan,
             ),
             PopupMenuItem(
               value: 3,
@@ -168,16 +167,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _vPlanTable(VPlan? plan) {
     if (plan == null) {
-      _loadNextVPlan();
-
       return const SizedBox.shrink();
     }
 
-    String title = vplanData!.head.title;
-    String subtitle = vplanData!.head.created;
+    String title = plan!.head.title;
+    String subtitle = plan!.head.created;
 
     List<DataRow> rows = [];
-    for (var entry in vplanData!.body) {
+    for (var entry in plan!.body) {
       rows.add(DataRow(cells: <DataCell>[
         DataCell(Text(entry.bodyClass)),
         DataCell(Text(entry.lesson)),
@@ -212,6 +209,21 @@ class _MyHomePageState extends State<MyHomePage> {
             )));
   }
 
+  Future<Widget> _vPlanByType(VPlanType vtyp) async {
+    VPlan data;
+
+    switch (vtyp) {
+      case VPlanType.current:
+        data = await _getCurrentVPlan();
+        break;
+      case VPlanType.next:
+        data = await _getNextVPlan();
+        break;
+    }
+
+    return _vPlanTable(data);
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -227,17 +239,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       const SnackBar(content: Text('This is a snackbar')));
                 },
               ),
-              !vplanVariant.startsWith("Commit")
-                  ? const SizedBox()
-                  : IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      tooltip: 'Kalender',
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('This is a snackbar')));
-                      },
-                    ),
+              IconButton(
+                icon: const Icon(Icons.calendar_today),
+                tooltip: 'Kalender',
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('This is a snackbar')));
+                },
+              ),
             ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(10),
@@ -252,7 +261,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
             ),
           ),
-          body: _vPlanTable(vplanData),
+          body: TabBarView(children: tabViews),
           floatingActionButton: Align(
               alignment: Alignment.bottomRight,
               child:
