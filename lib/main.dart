@@ -81,6 +81,8 @@ Future<VPlan> _downloadVPlan(VPlanType typ) async {
 
 class _MyHomePageState extends State<MyHomePage> {
   VPlan? vplanData;
+  String vplanVariant = "";
+  String commit = "2be908d5914d6ae327ddd41184ce999076f5c236";
   bool loading = true;
 
   Future<void> _loadVPlan() async {
@@ -89,10 +91,11 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     VPlan tmp = await _downloadVPlanURL(
-        'http://192.168.1.28:3001/akora/lernsax/raw/commit/2be908d5914d6ae327ddd41184ce999076f5c236/vplan.json');
+        'http://192.168.1.28:3001/akora/lernsax/raw/commit/$commit/vplan.json');
 
     setState(() {
       vplanData = tmp;
+      vplanVariant = "Commit " + commit.substring(0, 8);
       loading = false;
     });
   }
@@ -104,6 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
     VPlan tmp = await _downloadVPlan(VPlanType.next);
     setState(() {
       vplanData = tmp;
+      vplanVariant = "Next";
       loading = false;
     });
   }
@@ -115,6 +119,7 @@ class _MyHomePageState extends State<MyHomePage> {
     VPlan tmp = await _downloadVPlan(VPlanType.current);
     setState(() {
       vplanData = tmp;
+      vplanVariant = "Current";
       loading = false;
     });
   }
@@ -183,56 +188,75 @@ class _MyHomePageState extends State<MyHomePage> {
       ]));
     }
 
-    return Column(
-      children: [
-        Text(title),
-        Text("Letzte Änderung am: $subtitle"),
-        DataTable(
-          columnSpacing: 10,
-          columns: const <DataColumn>[
-            DataColumn(label: Text("Klasse")),
-            DataColumn(label: Text("S")),
-            DataColumn(label: Text("Fach")),
-            DataColumn(label: Text("Lehrer")),
-            DataColumn(label: Text("Raum")),
-            DataColumn(label: Text("Info"))
-          ],
-          rows: rows,
-        ),
-        // This trailing comma makes auto-formatting nicer for build methods.
-      ],
-    );
+    return SingleChildScrollView(
+        child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              children: [
+                Text(title),
+                Text("Letzte Änderung am: $subtitle"),
+                DataTable(
+                  columnSpacing: 10,
+                  columns: const <DataColumn>[
+                    DataColumn(label: Text("Klasse")),
+                    DataColumn(label: Text("S")),
+                    DataColumn(label: Text("Fach")),
+                    DataColumn(label: Text("Lehrer")),
+                    DataColumn(label: Text("Raum")),
+                    DataColumn(label: Text("Info"))
+                  ],
+                  rows: rows,
+                ),
+                // This trailing comma makes auto-formatting nicer for build methods.
+              ],
+            )));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Einstellungen',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('This is a snackbar')));
-            },
+    return DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          appBar: AppBar(
+            actions: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.settings),
+                tooltip: 'Einstellungen',
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('This is a snackbar')));
+                },
+              ),
+              !vplanVariant.startsWith("Commit")
+                  ? const SizedBox()
+                  : IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      tooltip: 'Kalender',
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('This is a snackbar')));
+                      },
+                    ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(10),
+              child: loading
+                  ? const LinearProgressIndicator()
+                  : const TabBar(
+                      tabs: [
+                        Tab(text: "Heute"),
+                        Tab(text: "Folgend"),
+                        Tab(icon: Icon(Icons.directions_bike)),
+                      ],
+                    ),
+            ),
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(10),
-          child: loading
-              ? const LinearProgressIndicator()
-              : const SizedBox.shrink(),
-        ),
-      ),
-      body: SingleChildScrollView(
-          child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: _vPlanTable(vplanData))),
-      floatingActionButton: Align(
-          alignment: Alignment.bottomRight,
-          child: SizedBox(height: 80.0, width: 80.0, child: _offsetPopup())),
-    );
+          body: _vPlanTable(vplanData),
+          floatingActionButton: Align(
+              alignment: Alignment.bottomRight,
+              child:
+                  SizedBox(height: 80.0, width: 80.0, child: _offsetPopup())),
+        ));
   }
 }
