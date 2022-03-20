@@ -170,11 +170,11 @@ class _MyHomePageState extends State<MyHomePage> {
       return const SizedBox.shrink();
     }
 
-    String title = plan!.head.title;
-    String subtitle = plan!.head.created;
+    String title = plan.head.title;
+    String subtitle = plan.head.created;
 
     List<DataRow> rows = [];
-    for (var entry in plan!.body) {
+    for (var entry in plan.body) {
       rows.add(DataRow(cells: <DataCell>[
         DataCell(Text(entry.bodyClass)),
         DataCell(Text(entry.lesson)),

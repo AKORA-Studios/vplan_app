@@ -2,11 +2,25 @@
 //
 //     final vPlan = vPlanFromJson(jsonString);
 
+import 'package:http/http.dart' as http;
+import 'dart:io';
 import 'dart:convert';
 
 VPlan vPlanFromJson(String str) => VPlan.fromJson(json.decode(str));
 
 String vPlanToJson(VPlan data) => json.encode(data.toJson());
+
+Future<String> _download(String url) async {
+  final response = await http.get(Uri.parse(url), headers: {
+    HttpHeaders.authorizationHeader: 'Basic bWFub3M6TWFuMThWcGxhbg=='
+  });
+
+  return utf8.decode(response.bodyBytes);
+}
+
+Future<VPlan> downloadVPlanURL(String typ) async {
+  return vPlanFromJson(await _download(typ));
+}
 
 class VPlan {
   VPlan({
