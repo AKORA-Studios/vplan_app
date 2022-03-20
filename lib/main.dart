@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:vplan_app/json/vplan.dart';
+import 'package:vplan_app/vplan_table.dart';
 
 void main() {
   runApp(const MyApp());
@@ -82,46 +83,12 @@ Future<VPlan> _downloadVPlan(VPlanType typ) async {
 class _MyHomePageState extends State<MyHomePage> {
   String commit = "2be908d5914d6ae327ddd41184ce999076f5c236";
   bool loading = true;
-  List<Widget> tabViews = const [SizedBox(), SizedBox(), SizedBox()];
-
-  Future<VPlan> _loadVPlan() async {
-    setState(() {
-      loading = true;
-    });
-
-    VPlan tmp = await _downloadVPlanURL(
-        'http://192.168.1.28:3001/akora/lernsax/raw/commit/$commit/vplan.json');
-
-    setState(() {
-      loading = false;
-    });
-
-    return tmp;
-  }
-
-  Future<VPlan> _getNextVPlan() async {
-    setState(() {
-      loading = true;
-    });
-    VPlan tmp = await _downloadVPlan(VPlanType.next);
-    setState(() {
-      loading = false;
-    });
-
-    return tmp;
-  }
-
-  Future<VPlan> _getCurrentVPlan() async {
-    setState(() {
-      loading = true;
-    });
-    VPlan tmp = await _downloadVPlan(VPlanType.current);
-    setState(() {
-      loading = false;
-    });
-
-    return tmp;
-  }
+  List<Widget> tabViews = const [
+    vPlanTable(
+        url: 'https://manos-dresden.de/vplan/upload/current/students.json'),
+    vPlanTable(url: 'https://manos-dresden.de/vplan/upload/next/students.json'),
+    SizedBox()
+  ];
 
   Widget _offsetPopup() => PopupMenuButton<int>(
       itemBuilder: (context) => [
@@ -132,7 +99,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
-              onTap: _getCurrentVPlan,
             ),
             PopupMenuItem(
               value: 2,
@@ -141,7 +107,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
-              onTap: _getNextVPlan,
             ),
             PopupMenuItem(
               value: 3,
@@ -150,7 +115,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 style:
                     TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
               ),
-              onTap: _loadVPlan,
             ),
           ],
       icon: Container(
@@ -165,71 +129,13 @@ class _MyHomePageState extends State<MyHomePage> {
             shape: const StadiumBorder()),
       ));
 
-  Widget _vPlanTable(VPlan? plan) {
-    if (plan == null) {
-      return const SizedBox.shrink();
-    }
-
-    String title = plan.head.title;
-    String subtitle = plan.head.created;
-
-    List<DataRow> rows = [];
-    for (var entry in plan.body) {
-      rows.add(DataRow(cells: <DataCell>[
-        DataCell(Text(entry.bodyClass)),
-        DataCell(Text(entry.lesson)),
-        DataCell(Text(entry.subject)),
-        DataCell(Text(entry.teacher)),
-        DataCell(Text(entry.room)),
-        DataCell(SingleChildScrollView(child: Text(entry.info)))
-      ]));
-    }
-
-    return SingleChildScrollView(
-        child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                Text(title),
-                Text("Letzte Änderung am: $subtitle"),
-                DataTable(
-                  columnSpacing: 10,
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text("Klasse")),
-                    DataColumn(label: Text("S")),
-                    DataColumn(label: Text("Fach")),
-                    DataColumn(label: Text("Lehrer")),
-                    DataColumn(label: Text("Raum")),
-                    DataColumn(label: Text("Info"))
-                  ],
-                  rows: rows,
-                ),
-                // This trailing comma makes auto-formatting nicer for build methods.
-              ],
-            )));
-  }
-
-  Future<Widget> _vPlanByType(VPlanType vtyp) async {
-    VPlan data;
-
-    switch (vtyp) {
-      case VPlanType.current:
-        data = await _getCurrentVPlan();
-        break;
-      case VPlanType.next:
-        data = await _getNextVPlan();
-        break;
-    }
-
-    return _vPlanTable(data);
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
         length: 3,
         child: Scaffold(
           appBar: AppBar(
+            elevation: 10.1,
             actions: <Widget>[
               IconButton(
                 icon: const Icon(Icons.settings),
@@ -248,17 +154,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
             ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(10),
-              child: loading
-                  ? const LinearProgressIndicator()
-                  : const TabBar(
-                      tabs: [
-                        Tab(text: "Heute"),
-                        Tab(text: "Folgend"),
-                        Tab(icon: Icon(Icons.directions_bike)),
-                      ],
-                    ),
+            bottom: const PreferredSize(
+              preferredSize: Size.fromHeight(10),
+              child: TabBar(
+                tabs: [
+                  Tab(text: "Heute"),
+                  Tab(text: "Folgend"),
+                  Tab(icon: Icon(Icons.directions_bike)),
+                ],
+              ),
             ),
           ),
           body: TabBarView(children: tabViews),

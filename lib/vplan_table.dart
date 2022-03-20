@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, camel_case_types
 
 import 'package:flutter/material.dart';
 import 'package:vplan_app/json/vplan.dart';
